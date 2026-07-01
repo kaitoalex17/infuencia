@@ -74,8 +74,8 @@ app.get('/dir/:coordenadas', async (req, res) => {
         res.send(resultado);
 
     } catch (error) {
-        console.error(error);
-        res.status(500).send("Error interno procesando el área de influencia.");
+        console.error("Error en el servidor:", error);
+        res.status(500).send(`Error interno: ${error.message}`);
     }
 });
 
