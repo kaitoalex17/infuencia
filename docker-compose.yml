@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  influencia-app:
+    build: .
+    container_name: area-influencia-service
+    ports:
+      - "3006:3006"
+    environment:
+      - GROQ_API_KEY=tu_api_key_aqui_de_groq
+    restart: always
