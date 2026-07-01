@@ -10,6 +10,42 @@ const PORT = process.env.PORT || 3006;
 // Inicializa Groq (Asegúrate de pasarle la API KEY por entorno o tenerla definida)
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
 
+// Lista de servidores Overpass públicos alternativos para failover
+const OVERPASS_ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://lz4.overpass-api.de/api/interpreter',
+    'https://z.overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter'
+];
+
+async function queryOverpassWithFailover(query) {
+    let lastError = null;
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+        try {
+            console.log(`Intentando conectar a Overpass en: ${endpoint}`);
+            const overpassUrl = `${endpoint}?data=${encodeURIComponent(query)}`;
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+            
+            const response = await fetch(overpassUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            } else {
+                const text = await response.text();
+                throw new Error(`Servidor respondió con código ${response.status}: ${text.substring(0, 80)}`);
+            }
+        } catch (error) {
+            console.warn(`Error en el servidor Overpass (${endpoint}):`, error.message);
+            lastError = error;
+        }
+    }
+    throw new Error(`Todos los servidores Overpass fallaron. Último error: ${lastError ? lastError.message : 'Desconocido'}`);
+}
+
 app.use(express.json());
 // Servir el buscador estático si entran a la raíz
 app.use(express.static(path.join(__dirname, 'public')));
@@ -34,11 +70,8 @@ app.get('/dir/:coordenadas', async (req, res) => {
             out body geom;
         `;
         
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
-        const response = await fetch(overpassUrl);
-        if (!response.ok) throw new Error('Error al consultar Overpass API');
+        const data = await queryOverpassWithFailover(overpassQuery);
         
-        const data = await response.json();
         const direccionesCRUDAS = data.elements
             .filter(el => el.tags && el.tags["addr:street"] && el.tags["addr:housenumber"])
             .map(el => ({
