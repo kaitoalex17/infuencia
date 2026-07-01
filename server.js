@@ -54,7 +54,6 @@ async function queryOverpassWithFailover(query) {
 // Función de geocodificación inversa con CartoCiudad (oficial en España) como fallback
 async function queryCartoCiudad(lat, lon) {
     try {
-        console.log(`Intentando conectar a CartoCiudad para fallback: lat=${lat}, lon=${lon}`);
         const url = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lon=${lon}&lat=${lat}`;
         const response = await fetch(url, {
             headers: {
@@ -76,6 +75,44 @@ async function queryCartoCiudad(lat, lon) {
         console.warn("Fallo al consultar CartoCiudad:", error.message);
     }
     return null;
+}
+
+// Escaneo en cuadrícula para obtener múltiples portales en un radio de ~100m usando CartoCiudad
+async function queryCartoCiudadGrid(lat, lon) {
+    const latOffset = 30 / 111111;
+    const lonOffset = 30 / (111111 * Math.cos(lat * Math.PI / 180));
+    const latOffsetDiag = latOffset * Math.SQRT1_2;
+    const lonOffsetDiag = lonOffset * Math.SQRT1_2;
+
+    const points = [
+        { lat, lon },
+        { lat: lat + latOffset, lon },
+        { lat: lat - latOffset, lon },
+        { lat, lon: lon + lonOffset },
+        { lat, lon: lon - lonOffset },
+        { lat: lat + latOffsetDiag, lon: lon + lonOffsetDiag },
+        { lat: lat + latOffsetDiag, lon: lon - lonOffsetDiag },
+        { lat: lat - latOffsetDiag, lon: lon + lonOffsetDiag },
+        { lat: lat - latOffsetDiag, lon: lon - lonOffsetDiag }
+    ];
+
+    try {
+        console.log(`Ejecutando escaneo en cuadrícula de CartoCiudad (9 puntos) alrededor de lat=${lat}, lon=${lon}`);
+        const promises = points.map(p => queryCartoCiudad(p.lat, p.lon));
+        const results = await Promise.all(promises);
+        
+        const unique = {};
+        for (const r of results) {
+            if (r) {
+                const key = `${r.calle}-${r.numero}`;
+                unique[key] = r;
+            }
+        }
+        return Object.values(unique);
+    } catch (error) {
+        console.warn("Fallo en escaneo de cuadrícula CartoCiudad:", error.message);
+    }
+    return [];
 }
 
 app.use(express.json());
@@ -120,11 +157,11 @@ app.get('/dir/:coordenadas', async (req, res) => {
         ];
 
         if (direccionesCRUDAS.length === 0) {
-            console.log("No se encontraron direcciones en Overpass. Consultando fallback CartoCiudad...");
-            const fallbackAddress = await queryCartoCiudad(lat, lon);
-            if (fallbackAddress) {
-                console.log("Dirección fallback encontrada:", fallbackAddress);
-                direccionesCRUDAS.push(fallbackAddress);
+            console.log("No se encontraron direcciones en Overpass. Consultando fallback CartoCiudad Grid...");
+            const fallbackAddresses = await queryCartoCiudadGrid(Number(lat), Number(lon));
+            if (fallbackAddresses && fallbackAddresses.length > 0) {
+                console.log("Direcciones fallback encontradas en cuadrícula:", fallbackAddresses.length);
+                direccionesCRUDAS.push(...fallbackAddresses);
             }
         }
 
