@@ -51,6 +51,33 @@ async function queryOverpassWithFailover(query) {
     throw new Error(`Todos los servidores Overpass fallaron. Último error: ${lastError ? lastError.message : 'Desconocido'}`);
 }
 
+// Función de geocodificación inversa con CartoCiudad (oficial en España) como fallback
+async function queryCartoCiudad(lat, lon) {
+    try {
+        console.log(`Intentando conectar a CartoCiudad para fallback: lat=${lat}, lon=${lon}`);
+        const url = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lon=${lon}&lat=${lat}`;
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'InfluenciaService/1.0.0 (https://infuencia.instala.xyz; info@instala.xyz)'
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.address && data.portalNumber) {
+                const tipoVia = (data.tip_via || 'Calle').toLowerCase();
+                const tipoViaCapitalized = tipoVia.charAt(0).toUpperCase() + tipoVia.slice(1);
+                return {
+                    calle: `${tipoViaCapitalized} ${data.address}`,
+                    numero: data.portalNumber
+                };
+            }
+        }
+    } catch (error) {
+        console.warn("Fallo al consultar CartoCiudad:", error.message);
+    }
+    return null;
+}
+
 app.use(express.json());
 // Servir el buscador estático si entran a la raíz
 app.use(express.static(path.join(__dirname, 'public')));
@@ -77,7 +104,7 @@ app.get('/dir/:coordenadas', async (req, res) => {
         
         const data = await queryOverpassWithFailover(overpassQuery);
         
-        const direccionesCRUDAS = data.elements
+        let direccionesCRUDAS = data.elements
             .filter(el => el.tags && el.tags["addr:street"] && el.tags["addr:housenumber"])
             .map(el => ({
                 calle: el.tags["addr:street"],
@@ -91,6 +118,15 @@ app.get('/dir/:coordenadas', async (req, res) => {
                     .map(el => el.tags["name"])
             )
         ];
+
+        if (direccionesCRUDAS.length === 0) {
+            console.log("No se encontraron direcciones en Overpass. Consultando fallback CartoCiudad...");
+            const fallbackAddress = await queryCartoCiudad(lat, lon);
+            if (fallbackAddress) {
+                console.log("Dirección fallback encontrada:", fallbackAddress);
+                direccionesCRUDAS.push(fallbackAddress);
+            }
+        }
 
         if (direccionesCRUDAS.length === 0) {
             res.header("Content-Type", "text/plain; charset=utf-8");
