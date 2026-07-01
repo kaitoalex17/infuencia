@@ -28,7 +28,12 @@ async function queryOverpassWithFailover(query) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
             
-            const response = await fetch(overpassUrl, { signal: controller.signal });
+            const response = await fetch(overpassUrl, { 
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'InfluenciaService/1.0.0 (https://infuencia.instala.xyz; info@instala.xyz)'
+                }
+            });
             clearTimeout(timeoutId);
             
             if (response.ok) {
