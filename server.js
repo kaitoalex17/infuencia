@@ -69,8 +69,8 @@ app.get('/dir/:coordenadas', async (req, res) => {
         const overpassQuery = `
             [out:json][timeout:25];
             (
-              node["addr:housenumber"](around:${radio}, ${lat}, ${lon});
-              way["addr:housenumber"](around:${radio}, ${lat}, ${lon});
+              nwr["addr:housenumber"](around:${radio}, ${lat}, ${lon});
+              way["highway"](around:${radio}, ${lat}, ${lon});
             );
             out body geom;
         `;
@@ -84,9 +84,21 @@ app.get('/dir/:coordenadas', async (req, res) => {
                 numero: el.tags["addr:housenumber"]
             }));
 
+        const callesCercanas = [
+            ...new Set(
+                data.elements
+                    .filter(el => el.tags && el.tags["highway"] && el.tags["name"])
+                    .map(el => el.tags["name"])
+            )
+        ];
+
         if (direccionesCRUDAS.length === 0) {
             res.header("Content-Type", "text/plain; charset=utf-8");
-            return res.send("Area de influencia: No se encontraron viviendas con numeración en este radio.");
+            if (callesCercanas.length > 0) {
+                return res.send(`Area de influencia: No se encontraron viviendas numeradas en este radio. Calles más cercanas: ${callesCercanas.join(', ')}`);
+            } else {
+                return res.send("Area de influencia: No se encontraron viviendas con numeración ni calles registradas en este radio.");
+            }
         }
 
         // Llamada a Groq para formatear
