@@ -216,31 +216,6 @@
             background: rgba(255, 255, 255, 0.04);
         }
 
-        .presets {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-        }
-
-        .preset-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--card-border);
-            color: var(--text-secondary);
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .preset-badge:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-primary);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-1px);
-        }
-
         button.search-btn {
             width: 100%;
             padding: 16px;
@@ -431,6 +406,271 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* Interactive Results UI */
+        .interactive-section {
+            margin-top: 24px;
+            border-top: 1px solid var(--card-border);
+            padding-top: 24px;
+        }
+
+        .interactive-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .street-group {
+            margin-bottom: 16px;
+        }
+
+        .street-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .street-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .street-name i {
+            width: 14px;
+            height: 14px;
+            color: var(--primary);
+        }
+
+        .portals-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .portal-pill {
+            padding: 6px 14px;
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: inherit;
+        }
+
+        .portal-pill:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .portal-pill i {
+            width: 12px;
+            height: 12px;
+            opacity: 0.7;
+        }
+
+        /* Modal de Detalles Catastrales */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: #0d111a;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+        }
+
+        .modal-overlay.show .modal-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .modal-ref-catastral {
+            font-size: 13px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 4px;
+            font-family: monospace;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .close-btn i {
+            width: 20px;
+            height: 20px;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tabs */
+        .modal-tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);
+        }
+
+        .modal-loading {
+            padding: 40px 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .spinner-container {
+            display: inline-flex;
+            animation: spin 1s linear infinite;
+        }
+
+        .modal-error {
+            padding: 30px 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .units-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .unit-item {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--card-border);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: border-color 0.2s;
+        }
+
+        .unit-item:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .unit-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .unit-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
     </style>
 </head>
 <body>
@@ -477,6 +717,53 @@
                     </button>
                 </div>
                 <div class="result-box" id="resultado"></div>
+                
+                <!-- Interactive grid of street groups and portal buttons -->
+                <div id="interactiveResults" class="interactive-section" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalles Catastrales -->
+    <div id="detailsModal" class="modal-overlay" onclick="closeModalOnOutsideClick(event)">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalAddress">Calle Pincarrasco 42</h2>
+                    <p id="modalRefCatastral" class="modal-ref-catastral">RC: cargando...</p>
+                </div>
+                <button class="close-btn" onclick="closeModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div class="modal-tabs">
+                    <button class="tab-btn active" id="tabViviendas" onclick="switchTab('Viviendas')">Viviendas (<span id="countViviendas">0</span>)</button>
+                    <button class="tab-btn" id="tabLocales" onclick="switchTab('Locales')">Locales (<span id="countLocales">0</span>)</button>
+                    <button class="tab-btn" id="tabOtros" onclick="switchTab('Otros')">Otros/Anexos (<span id="countOtros">0</span>)</button>
+                </div>
+                
+                <!-- Loading -->
+                <div id="modalLoading" class="modal-loading">
+                    <div class="spinner-container">
+                        <i data-lucide="loader-2" class="spinner" style="width: 32px; height: 32px; color: var(--primary);"></i>
+                    </div>
+                    <p>Consultando desglose catastral del portal...</p>
+                </div>
+                
+                <!-- Content grid -->
+                <div id="modalContent" style="display: none;">
+                    <div id="unitsList" class="units-grid">
+                        <!-- Generado dinámicamente -->
+                    </div>
+                </div>
+                
+                <!-- Error -->
+                <div id="modalError" class="modal-error" style="display: none;">
+                    <i data-lucide="alert-circle" style="color: var(--error); width: 32px; height: 32px;"></i>
+                    <p id="modalErrorMsg">Error al consultar el Catastro.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -492,11 +779,8 @@
         lucide.createIcons();
 
         let rawResultText = "";
-
-        function aplicarPreset(coordenadas) {
-            document.getElementById('coords').value = coordenadas;
-            showToast("Preset aplicado con éxito", "success");
-        }
+        let activeTab = 'Viviendas';
+        let currentBuildingUnits = [];
 
         function showToast(message, type = "info") {
             const toast = document.getElementById('toast');
@@ -549,7 +833,6 @@
 
         async function buscar() {
             const coordsInput = document.getElementById('coords').value.trim();
-            // Remove multiple spaces, normalize commas
             const cleanCoords = coordsInput.replace(/\s+/g, '');
             
             if (!cleanCoords || !cleanCoords.includes(',')) {
@@ -563,6 +846,7 @@
             const resultContainer = document.getElementById('resultContainer');
             const resultado = document.getElementById('resultado');
             const copyBtn = document.getElementById('copyBtn');
+            const interactiveResults = document.getElementById('interactiveResults');
 
             // Setup loading state
             searchBtn.disabled = true;
@@ -573,6 +857,7 @@
 
             // Reveal result box with skeletons
             resultContainer.classList.add('show');
+            interactiveResults.style.display = "none";
             copyBtn.style.display = "none";
             resultado.className = "result-box";
             resultado.innerHTML = `
@@ -582,16 +867,21 @@
             `;
 
             try {
-                const response = await fetch(`/dir/${cleanCoords}`);
+                // Hacemos el fetch en formato JSON para obtener las coordenadas de cada portal
+                const response = await fetch(`/dir/${cleanCoords}?format=json`);
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(errorText || "Error en la petición");
                 }
                 
-                rawResultText = await response.text();
+                const data = await response.json();
+                rawResultText = data.resultado;
                 
-                // Display result
+                // Display result text
                 resultado.innerText = rawResultText;
+                
+                // Render portals list below it
+                renderInteractiveResults(data.direcciones);
                 
                 // Check if we found address or empty message
                 if (rawResultText.toLowerCase().includes("no se encontraron") || rawResultText.length === 0) {
@@ -614,6 +904,185 @@
                 btnIcon.setAttribute('data-lucide', 'search');
                 btnIcon.classList.remove('spinner');
                 lucide.createIcons();
+            }
+        }
+
+        function renderInteractiveResults(direcciones) {
+            const container = document.getElementById('interactiveResults');
+            container.innerHTML = '';
+            
+            if (!direcciones || direcciones.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            
+            // Agrupar por calle
+            const agrupado = {};
+            direcciones.forEach(d => {
+                if (!agrupado[d.calle]) {
+                    agrupado[d.calle] = [];
+                }
+                agrupado[d.calle].push(d);
+            });
+            
+            // Generar HTML
+            let html = '<div class="interactive-title">Desglose Físico (Haz clic en un portal para ver pisos y locales)</div>';
+            
+            for (const calle in agrupado) {
+                // Ordenar números
+                const portales = agrupado[calle].sort((a, b) => {
+                    const numA = parseInt(a.numero.toString().replace(/\D/g, '')) || 0;
+                    const numB = parseInt(b.numero.toString().replace(/\D/g, '')) || 0;
+                    return numA - numB;
+                });
+                
+                html += `
+                    <div class="street-group">
+                        <div class="street-name">
+                            <i data-lucide="navigation-2"></i> ${calle}
+                        </div>
+                        <div class="portals-list">
+                `;
+                
+                portales.forEach(p => {
+                    html += `
+                        <button class="portal-pill" onclick="abrirDetallePortal(${p.lat}, ${p.lon}, '${calle.replace(/'/g, "\\'")}', '${p.numero}')">
+                            ${p.numero} <i data-lucide="chevron-right"></i>
+                        </button>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        async function abrirDetallePortal(lat, lon, calle, numero) {
+            const modal = document.getElementById('detailsModal');
+            const modalAddress = document.getElementById('modalAddress');
+            const modalRefCatastral = document.getElementById('modalRefCatastral');
+            const modalLoading = document.getElementById('modalLoading');
+            const modalContent = document.getElementById('modalContent');
+            const modalError = document.getElementById('modalError');
+            
+            // Configurar cabecera inicial
+            modalAddress.innerText = `${calle} ${numero}`;
+            modalRefCatastral.innerText = 'Cargando referencia catastral...';
+            
+            // Mostrar modal y loading
+            modal.classList.add('show');
+            modalLoading.style.display = 'flex';
+            modalContent.style.display = 'none';
+            modalError.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/catastro/detalles?lat=${lat}&lon=${lon}`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.details || "Error al obtener datos catastrales");
+                }
+                
+                const data = await response.json();
+                
+                // Actualizar info con los datos reales
+                modalAddress.innerText = data.direccionOficial;
+                modalRefCatastral.innerText = `RC: ${data.refCatastral}`;
+                
+                currentBuildingUnits = data.unidades || [];
+                
+                // Forzar pestaña Viviendas por defecto al abrir
+                activeTab = 'Viviendas';
+                document.getElementById('tabViviendas').classList.add('active');
+                document.getElementById('tabLocales').classList.remove('active');
+                document.getElementById('tabOtros').classList.remove('active');
+
+                // Renderizar
+                renderUnits();
+                
+                // Ocultar loading, mostrar contenido
+                modalLoading.style.display = 'none';
+                modalContent.style.display = 'block';
+                
+            } catch (err) {
+                console.error(err);
+                modalLoading.style.display = 'none';
+                modalError.style.display = 'flex';
+                document.getElementById('modalErrorMsg').innerText = `Error Catastro: ${err.message}`;
+            }
+        }
+
+        function renderUnits() {
+            // Contar unidades por categoría
+            const viviendas = currentBuildingUnits.filter(u => u.categoria === 'Viviendas');
+            const locales = currentBuildingUnits.filter(u => u.categoria === 'Locales');
+            const otros = currentBuildingUnits.filter(u => u.categoria === 'Otros' || u.categoria === 'Anexos');
+            
+            document.getElementById('countViviendas').innerText = viviendas.length;
+            document.getElementById('countLocales').innerText = locales.length;
+            document.getElementById('countOtros').innerText = otros.length;
+            
+            // Filtrar las unidades de la pestaña activa
+            const activeList = currentBuildingUnits.filter(u => {
+                if (activeTab === 'Viviendas') return u.categoria === 'Viviendas';
+                if (activeTab === 'Locales') return u.categoria === 'Locales';
+                return u.categoria === 'Otros' || u.categoria === 'Anexos';
+            });
+            
+            const grid = document.getElementById('unitsList');
+            grid.innerHTML = '';
+            
+            if (activeList.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 30px; font-size: 14px;">No se encontraron elementos en esta categoría.</div>`;
+                return;
+            }
+            
+            activeList.forEach(u => {
+                // Formatear descripción
+                let descDetalle = [];
+                if (u.escalera) descDetalle.push(`Esc: ${u.escalera}`);
+                if (u.planta) {
+                    let p = u.planta;
+                    if (p === '00' || p === 'BJ' || p === 'PB') p = 'Baja';
+                    descDetalle.push(`Planta: ${p}`);
+                }
+                if (u.puerta) descDetalle.push(`Pta: ${u.puerta}`);
+                
+                const title = descDetalle.join(' | ') || 'Finca Única';
+                
+                grid.innerHTML += `
+                    <div class="unit-item">
+                        <div class="unit-title">${title}</div>
+                        <div class="unit-desc">${u.tipo}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tabViviendas').classList.remove('active');
+            document.getElementById('tabLocales').classList.remove('active');
+            document.getElementById('tabOtros').classList.remove('active');
+            
+            document.getElementById(`tab${tab}`).classList.add('active');
+            activeTab = tab;
+            
+            renderUnits();
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').classList.remove('show');
+        }
+
+        function closeModalOnOutsideClick(event) {
+            if (event.target.id === 'detailsModal') {
+                closeModal();
             }
         }
 

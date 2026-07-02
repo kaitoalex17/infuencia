@@ -67,7 +67,9 @@ async function queryCartoCiudad(lat, lon) {
                 const tipoViaCapitalized = tipoVia.charAt(0).toUpperCase() + tipoVia.slice(1);
                 return {
                     calle: `${tipoViaCapitalized} ${data.address}`,
-                    numero: data.portalNumber
+                    numero: data.portalNumber,
+                    lat: data.lat,
+                    lon: data.lng
                 };
             }
         }
@@ -115,6 +117,130 @@ async function queryCartoCiudadGrid(lat, lon) {
     return [];
 }
 
+// Función de consulta de unidades (pisos/locales) en la Sede Electrónica del Catastro de España
+async function queryCatastroUnits(lat, lon) {
+    try {
+        // 1. Obtener la referencia catastral, municipio y provincia desde CartoCiudad
+        const ccUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lon=${lon}&lat=${lat}`;
+        const ccResponse = await fetch(ccUrl, {
+            headers: {
+                'User-Agent': 'InfluenciaService/1.0.0 (https://infuencia.instala.xyz; info@instala.xyz)'
+            }
+        });
+        if (!ccResponse.ok) throw new Error("Fallo al consultar CartoCiudad para geolocalizar la parcela.");
+        
+        const ccData = await ccResponse.json();
+        const rc = ccData.refCatastral;
+        const municipio = ccData.muni;
+        const provincia = ccData.province;
+        
+        if (!rc) throw new Error("No se encontró referencia catastral para estas coordenadas.");
+        
+        console.log(`Consultando Catastro para RC: ${rc}, Municipio: ${municipio}, Provincia: ${provincia}`);
+        
+        // 2. Consultar el Catastro oficial (Consulta_DNPRC)
+        const catastroUrl = `https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPRC?Provincia=${encodeURIComponent(provincia)}&Municipio=${encodeURIComponent(municipio)}&RC=${encodeURIComponent(rc)}`;
+        const catastroResponse = await fetch(catastroUrl);
+        if (!catastroResponse.ok) throw new Error(`Fallo en el servidor del Catastro (${catastroResponse.status})`);
+        
+        const xmlText = await catastroResponse.text();
+        
+        // 3. Parsear el XML para extraer pisos y locales
+        const units = [];
+        
+        // Caso A: XML contiene lcons/cons (Edificio Colectivo)
+        if (xmlText.includes('<cons>')) {
+            const consRegex = /<cons>([\s\S]*?)<\/cons>/g;
+            let match;
+            while ((match = consRegex.exec(xmlText)) !== null) {
+                const consContent = match[1];
+                const lcdMatch = consContent.match(/<lcd>(.*?)<\/lcd>/);
+                const esMatch = consContent.match(/<es>(.*?)<\/es>/);
+                const ptMatch = consContent.match(/<pt>(.*?)<\/pt>/);
+                const puMatch = consContent.match(/<pu>(.*?)<\/pu>/);
+                
+                if (lcdMatch) {
+                    const tipo = lcdMatch[1].trim();
+                    const escalera = esMatch ? esMatch[1].trim() : '';
+                    const planta = ptMatch ? ptMatch[1].trim() : '';
+                    const puerta = puMatch ? puMatch[1].trim() : '';
+                    
+                    // Categorizar la unidad
+                    let categoria = 'Otros';
+                    const tipoUpper = tipo.toUpperCase();
+                    if (tipoUpper.includes('VIVIENDA') || tipoUpper.includes('RESIDENCIAL')) {
+                        categoria = 'Viviendas';
+                    } else if (tipoUpper.includes('COMERCIO') || tipoUpper.includes('LOCAL') || tipoUpper.includes('OFICINA') || tipoUpper.includes('INDUSTRIAL')) {
+                        categoria = 'Locales';
+                    } else if (tipoUpper.includes('APARCAMIENTO') || tipoUpper.includes('ALMACEN') || tipoUpper.includes('TRASTERO')) {
+                        categoria = 'Anexos';
+                    }
+                    
+                    units.push({
+                        tipo,
+                        escalera,
+                        planta,
+                        puerta,
+                        categoria
+                    });
+                }
+            }
+        } 
+        // Caso B: XML contiene lrcdnp/rcdnp (Lista de inmuebles individuales)
+        else if (xmlText.includes('<rcdnp>')) {
+            const rcdnpRegex = /<rcdnp>([\s\S]*?)<\/rcdnp>/g;
+            let match;
+            while ((match = rcdnpRegex.exec(xmlText)) !== null) {
+                const rcdnpContent = match[1];
+                const esMatch = rcdnpContent.match(/<es>(.*?)<\/es>/);
+                const ptMatch = rcdnpContent.match(/<pt>(.*?)<\/pt>/);
+                const puMatch = rcdnpContent.match(/<pu>(.*?)<\/pu>/);
+                
+                const es = esMatch ? esMatch[1].trim() : '';
+                const pt = ptMatch ? ptMatch[1].trim() : '';
+                const pu = puMatch ? puMatch[1].trim() : '';
+                
+                let categoria = 'Viviendas';
+                let tipo = 'Inmueble';
+                
+                const ptUpper = pt.toUpperCase();
+                if (pt === '00' || ptUpper === 'BJ' || ptUpper === 'PB') {
+                    categoria = 'Locales';
+                    tipo = 'Local / Planta Baja';
+                } else if (pt.startsWith('-') || ptUpper.includes('SS') || ptUpper.includes('S')) {
+                    categoria = 'Anexos';
+                    tipo = 'Sótano / Garaje';
+                }
+                
+                units.push({
+                    tipo,
+                    escalera: es,
+                    planta: pt,
+                    puerta: pu,
+                    categoria
+                });
+            }
+        }
+        
+        // Obtener dirección oficial del Catastro
+        const ldtMatch = xmlText.match(/<ldt>(.*?)<\/ldt>/);
+        const direccionOficial = ldtMatch ? ldtMatch[1].trim() : `${ccData.tip_via || ''} ${ccData.address || ''} ${ccData.portalNumber || ''}`;
+        
+        return {
+            refCatastral: rc,
+            direccionOficial,
+            municipio,
+            provincia,
+            codigoPostal: ccData.postalCode,
+            unidades: units
+        };
+        
+    } catch (error) {
+        console.error("Error en queryCatastroUnits:", error.message);
+        throw error;
+    }
+}
+
 app.use(express.json());
 // Servir el buscador estático si entran a la raíz
 app.use(express.static(path.join(__dirname, 'public')));
@@ -129,12 +255,15 @@ app.get('/dir/:coordenadas', async (req, res) => {
             return res.status(400).json({ error: "Formato de coordenadas incorrecto. Use: lat,lon" });
         }
 
-        const radio = 100;
         const overpassQuery = `
-            [out:json][timeout:25];
+            [out:json][timeout:30];
+            // 1. Encontrar las calles transitables cerca del punto
+            way(around:40, ${lat}, ${lon})["highway"]->.calles;
+            // 2. Obtener los portales asociados exclusivamente a los nombres de esas calles en el entorno
             (
-              nwr["addr:housenumber"](around:${radio}, ${lat}, ${lon});
-              way["highway"](around:${radio}, ${lat}, ${lon});
+              node(around.calles:100)["addr:housenumber"]["addr:street"];
+              way(around.calles:100)["addr:housenumber"]["addr:street"];
+              relation(around.calles:100)["addr:housenumber"]["addr:street"];
             );
             out body geom;
         `;
@@ -143,10 +272,24 @@ app.get('/dir/:coordenadas', async (req, res) => {
         
         let direccionesCRUDAS = data.elements
             .filter(el => el.tags && el.tags["addr:street"] && el.tags["addr:housenumber"])
-            .map(el => ({
-                calle: el.tags["addr:street"],
-                numero: el.tags["addr:housenumber"]
-            }));
+            .map(el => {
+                let elementLat = el.lat;
+                let elementLon = el.lon;
+                if (!elementLat && el.center) {
+                    elementLat = el.center.lat;
+                    elementLon = el.center.lon;
+                }
+                if (!elementLat && el.geometry && el.geometry.length > 0) {
+                    elementLat = el.geometry[0].lat;
+                    elementLon = el.geometry[0].lon;
+                }
+                return {
+                    calle: el.tags["addr:street"],
+                    numero: el.tags["addr:housenumber"],
+                    lat: elementLat,
+                    lon: elementLon
+                };
+            });
 
         const callesCercanas = [
             ...new Set(
@@ -156,6 +299,7 @@ app.get('/dir/:coordenadas', async (req, res) => {
             )
         ];
 
+        // Fallback a CartoCiudad Grid si no hay resultados en Overpass
         if (direccionesCRUDAS.length === 0) {
             console.log("No se encontraron direcciones en Overpass. Consultando fallback CartoCiudad Grid...");
             const fallbackAddresses = await queryCartoCiudadGrid(Number(lat), Number(lon));
@@ -179,11 +323,11 @@ app.get('/dir/:coordenadas', async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: "Eres un formateador de datos estricto. Agrupa las direcciones por calle y genera una lista de números separados por comas. El formato de salida debe ser exactamente: 'Area de influencia: Calle X 1,2,3 ; Calle Y 4,5,6'. No devuelvas nada más."
+                    content: "Eres un formateador experto para despliegues de fibra óptica. Tu tarea es organizar los portales recibidos. Si detectas locales o una finca, sepáralos de la siguiente forma exacta:\n\nArea de influencia:\n- Calle Principal 2 (Locales: A, B ; Pisos: 1ºA, 1ºB, 2ºA, 2ºB)\n- Calle Principal 4 (Planta Baja Comercial, Piso 1)\n- Calle Secundaria 1, 3, 5\n\nNo inventes datos. Si no hay pisos detallados, muestra solo los números de portal de forma lineal. No uses Markdown."
                 },
                 {
                     role: "user",
-                    content: JSON.stringify(direccionesCRUDAS)
+                    content: JSON.stringify(direccionesCRUDAS.map(d => ({ calle: d.calle, numero: d.numero })))
                 }
             ],
             model: "llama-3.1-8b-instant",
@@ -192,13 +336,35 @@ app.get('/dir/:coordenadas', async (req, res) => {
 
         const resultado = chatCompletion.choices[0]?.message?.content?.trim();
         
-        // Respondemos en texto plano (fácil para que tu App lo consuma directamente)
+        // Si se pide en formato JSON, devolvemos tanto el texto formateado como el array estructurado con coordenadas
+        if (req.query.format === 'json') {
+            return res.json({
+                resultado: resultado,
+                direcciones: direccionesCRUDAS
+            });
+        }
+
         res.header("Content-Type", "text/plain; charset=utf-8");
         res.send(resultado);
 
     } catch (error) {
         console.error("Error en el servidor:", error);
         res.status(500).send(`Error interno: ${error.message}`);
+    }
+});
+
+// Nueva ruta para obtener el desglose catastral detallado de un portal exacto (pisos/locales) por coordenadas
+app.get('/catastro/detalles', async (req, res) => {
+    const { lat, lon } = req.query;
+    if (!lat || !lon || isNaN(Number(lat)) || isNaN(Number(lon))) {
+        return res.status(400).json({ error: "Parámetros 'lat' y 'lon' requeridos y deben ser numéricos." });
+    }
+    
+    try {
+        const info = await queryCatastroUnits(Number(lat), Number(lon));
+        res.json(info);
+    } catch (err) {
+        res.status(500).json({ error: "Error consultando el Catastro", details: err.message });
     }
 });
 
